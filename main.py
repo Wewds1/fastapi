@@ -1,12 +1,24 @@
 import uvicorn
+import os
 from fastapi import FastAPI, Path, Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from jose import JWTError, jwt
+from passlib.context import CryptContext
 from typing import Dict, Optional
 from models import Product
 from database import session, engine
 from sqlalchemy.orm import Session
+from dotenv import load_dotenv
+
+load_dotenv()
 
 import database_models
 
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = "HS256"
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme=OAuth2PasswordBearer(tokenUrl="token")
 
 app = FastAPI()
 
@@ -28,6 +40,28 @@ products = [
     Product(id=5, name="Bread", description="a bread", price=100, quantity=10),
 ]
 
+def create_access_token(data:Dict):
+    import datetime
+    to_data = data.copy()
+    expire=datetime.datetime.utcnow() + datetime.timedelta(minutes=15)
+    to_data.update({"exp": expire})
+    return jwt.encode(to_data, SECRET_KEY, algorithm=ALGORITHM)
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise HTTPException(status_code=401, detail="Could not validate credentials")
+        return username
+
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
+
+
+
+
+
 def init_db():
     db = session()
     count = db.query(database_models.Products).count()
@@ -48,8 +82,15 @@ def get_db():
 
 
 init_db()
+@app.post("/token")
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    if form_data.username == "admin" and form_data.password == "secret123":
+        access_token = create_access_token(data={"sub": form_data.username})
+        return {"access_token": access_token, "token_type": "bearer"}
+    raise HTTPException(status_code=400, detail="Incorrect username or password")
+
 @app.get("/products")
-def get_all_products(db: Session = Depends(get_db)):
+def get_all_products(db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
     db_products = db.query(database_models.Products).all()
     return db_products
 
