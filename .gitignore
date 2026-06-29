@@ -57,3 +57,6 @@ front
 .env.development.local
 .env.test.local
 .env.production.local
+
+
+plans.md

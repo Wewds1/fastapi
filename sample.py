@@ -26,7 +26,7 @@
 # print(y)
 
 
-def func(a=[]):
+def func(a= []):
     a.append(1)
     return a
 
