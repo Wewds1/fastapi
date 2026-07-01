@@ -4,6 +4,7 @@ from sqlalchemy import select, func
 from .database import get_db, engine
 from .models.database import Base, Product as DBProduct, Student as DBStudent
 from .models.schemas import Product, Student
+from .core import security
 from contextlib import asynccontextmanager
 import asyncio
 
@@ -20,17 +21,17 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan, title="CMS Content Service")
 
 @app.get("/products")
-async def get_all_products(db: AsyncSession = Depends(get_db)):
+async def get_all_products(db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     result = await db.execute(select(DBProduct))
     return result.scalars().all()
 
 @app.get("/product/{product_id}")
-async def get_product(product_id: int, db: AsyncSession = Depends(get_db)):
+async def get_product(product_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     result = await db.execute(select(DBProduct).where(DBProduct.id == product_id))
     return result.scalars().first()
 
 @app.post("/product")
-async def add_product(product: Product, db: AsyncSession = Depends(get_db), background_tasks: BackgroundTasks = Depends()):
+async def add_product(product: Product, db: AsyncSession = Depends(get_db), background_tasks: BackgroundTasks = Depends(), current_user = Depends(get_current_user)):
     db_product = DBProduct(**product.model_dump())
     db.add(db_product)
     await db.commit()
@@ -39,7 +40,7 @@ async def add_product(product: Product, db: AsyncSession = Depends(get_db), back
     return db_product
 
 @app.put("/product/{product_id}")
-async def update_product(product_id: int, product: Product, db: AsyncSession = Depends(get_db)):
+async def update_product(product_id: int, product: Product, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     result = await db.execute(select(DBProduct).where(DBProduct.id == product_id))
     db_product = result.scalars().first()
     if not db_product:
