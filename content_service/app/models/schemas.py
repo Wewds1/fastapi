@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator, EmailStr
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 
 class Product(BaseModel):
@@ -7,23 +7,6 @@ class Product(BaseModel):
     description: str = Field(..., min_length=1, max_length=255, description="A brief description of the product")
     price: float = Field(..., gt=0, description="The price must be greater than zero")
     quantity: int = Field(..., ge=0, description="The quantity must be zero or more")
-
-class UserBase(BaseModel):
-    username: str = Field(..., min_length=3, max_length=50, description="Username must be between 3 and 50 characters")
-    role: str = Field(default="user", pattern=r"^(admin|user)$", description="Role must be either 'admin' or 'user'")
-
-class UserCreate(UserBase):
-    password: str = Field(..., min_length=8, description="Password must be at least 8 characters long")
-
-    @field_validator('password')
-    @classmethod
-    def password_must_contain_special(cls, v: str) -> str:
-        if not any(char in '!@#$%^&*()-_=+' for char in v):
-            raise ValueError('Password must contain at least one special character')
-        return v
-
-class UserResponse(UserBase):
-    id: int
 
 class Student(BaseModel):
     id: int = Field(..., description="The student ID")

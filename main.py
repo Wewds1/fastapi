@@ -21,7 +21,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 async def send_notification(product_id: int, event: str):
     # Simulate an asynchronous I/O operation (e.g., sending an email or external API call)
     await asyncio.sleep(2)
-    print(f"NOTIFICATION: Product {product_id} was {event}")
+    logger.info(f"NOTIFICATION: Product {product_id} was {event}")
 
 students = {
     1: {
@@ -42,9 +42,8 @@ products = [
 async def lifespan(app: FastAPI):
     # Startup: Initialize DB and Users
     async with AsyncSessionLocal() as db:
-        # 1. Create tables
-        async with engine.begin() as conn:
-            await conn.run_sync(database_models.Base.metadata.create_all)
+        # 1. Table creation is now handled by Alembic migrations
+        pass
 
         # 2. Seed Products
         product_count = await db.execute(select(func.count()).select_from(database_models.Products))
