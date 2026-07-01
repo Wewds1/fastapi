@@ -20,6 +20,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan, title="CMS Content Service")
 
+async def get_current_user(token: str = Depends(security.oauth2_scheme)):
+    username = security.decode_access_token(token)
+    if username is None:
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
+    return username
+
 @app.get("/products")
 async def get_all_products(db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     result = await db.execute(select(DBProduct))
@@ -53,7 +59,9 @@ async def update_product(product_id: int, product: Product, db: AsyncSession = D
     return db_product
 
 @app.delete("/product/{product_id}")
-async def delete_product(product_id: int, db: AsyncSession = Depends(get_db), background_tasks: BackgroundTasks = Depends()):
+async def delete_product(product_id: int, db: AsyncSession = Depends(get_db), background_tasks: BackgroundTasks = Depends(), current_user = Depends(get_current_user)):
+    # Note: RBAC check for 'admin' would happen here.
+    # For now, we just require a valid user.
     result = await db.execute(select(DBProduct).where(DBProduct.id == product_id))
     db_product = result.scalars().first()
     if db_product:
@@ -64,7 +72,7 @@ async def delete_product(product_id: int, db: AsyncSession = Depends(get_db), ba
     return "Product not found"
 
 @app.get("/student/{student_id}")
-async def get_student(student_id: int, db: AsyncSession = Depends(get_db)):
+async def get_student(student_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     result = await db.execute(select(DBStudent).where(DBStudent.id == student_id))
     student = result.scalars().first()
     if not student:
@@ -72,7 +80,7 @@ async def get_student(student_id: int, db: AsyncSession = Depends(get_db)):
     return student
 
 @app.get("/student/search")
-async def search_student(name: str, db: AsyncSession = Depends(get_db)):
+async def search_student(name: str, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     result = await db.execute(select(DBStudent).where(DBStudent.name == name))
     student = result.scalars().first()
     if not student:
