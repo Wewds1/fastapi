@@ -1,15 +1,12 @@
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-import os
 from typing import Dict, Optional, List
 import datetime
-from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
+from config import settings
 
-load_dotenv()
-
-SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = os.getenv("ALGORITHM", "HS256")
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.ALGORITHM
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
